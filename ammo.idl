@@ -37,6 +37,10 @@ interface btQuadWord {
 interface btQuaternion {
   void btQuaternion(float x, float y, float z, float w);
   void setValue(float x, float y, float z, float w);
+  float getAngle();
+  [Const] float getW();
+  [Value] btVector3 getAxis();
+  [Value] btQuaternion normalized();
 };
 btQuaternion implements btQuadWord;
 
@@ -389,6 +393,7 @@ interface btRigidBody {
   void updateInertiaTensor();
   [Const, Ref] btVector3 getLinearVelocity();
   [Const, Ref] btVector3 getAngularVelocity();
+  [Const, Ref] btVector3 getTotalTorque();
   void setLinearVelocity([Const, Ref] btVector3 lin_vel);
   void setAngularVelocity([Const, Ref] btVector3 ang_vel);
   btMotionState getMotionState();
@@ -469,6 +474,11 @@ interface btHingeConstraint {
 
   void setLimit(float low, float high, float softness, float biasFactor, optional float relaxationFactor);
   void enableAngularMotor(boolean enableMotor, float targetVelocity, float maxMotorImpulse);
+  float getHingeAngle();
+  [Ref] btTransform getFrameOffsetA();
+  [Ref] btTransform getFrameOffsetB();
+  [Ref] btRigidBody getRigidBodyA();
+  [Ref] btRigidBody getRigidBodyB();
 };
 btHingeConstraint implements btTypedConstraint;
 
@@ -508,6 +518,7 @@ interface btCollisionWorld {
   [Const] btBroadphaseInterface getBroadphase ();
   void convexSweepTest([Const] btConvexShape castShape, [Const, Ref] btTransform from, [Const, Ref] btTransform to, [Ref] ConvexResultCallback resultCallback, float allowedCcdPenetration); 
   void contactPairTest([Const] btCollisionObject colObjA, [Const] btCollisionObject colObjB, [Ref] ContactResultCallback resultCallback);  
+
 };
 
 interface btContactSolverInfo {
@@ -527,6 +538,7 @@ interface btDiscreteDynamicsWorld {
   void setGravity([Ref] btVector3 gravity);
   [Value] btVector3 getGravity();
 
+//  [Value] btCollisionWorld getCollisionWorld();
   void addRigidBody(btRigidBody body);
   void addRigidBody(btRigidBody body, short group, short mask);
   void removeRigidBody(btRigidBody body);
