@@ -2,7 +2,17 @@ ammo.js
 =======
 
 
-**Demo: http://kripken.github.com/ammo.js/examples/new/ammo.html**
+# Demos
+
+ * [Cubes](http://kripken.github.com/ammo.js/examples/webgl_demo/ammo.html)
+ * [Cubes (WebAssembly)](http://kripken.github.com/ammo.js/examples/webgl_demo/ammo.wasm.html)
+ * [SoftBody-Rope](http://kripken.github.com/ammo.js/examples/webgl_demo_softbody_rope/index.html)
+ * [SoftBody-Cloth](http://kripken.github.com/ammo.js/examples/webgl_demo_softbody_cloth/index.html)
+ * [SoftBody-Volume](http://kripken.github.com/ammo.js/examples/webgl_demo_softbody_volume/index.html)
+ * [Heightmap](http://kripken.github.com/ammo.js/examples/webgl_demo_terrain/index.html)
+ * [Vehicle](http://kripken.github.io/ammo.js/examples/webgl_demo_vehicle/index.html)
+
+# Overview
 
 **Example code to give you an idea of the API: https://github.com/kripken/ammo.js/blob/master/examples/webgl_demo/ammo.html#L14**
 
@@ -30,7 +40,7 @@ You can also build ammo.js yourself, as follows:
 
    and set it up. See
 
-      https://github.com/kripken/emscripten/wiki/Getting-started
+      http://kripken.github.io/emscripten-site/docs/getting_started/
 
  * Run the build script,
 
@@ -142,24 +152,25 @@ Release Process
 Pushing a new build in `builds/ammo.js` should be done only after the
 following steps:
 
-  * Build a safe build and make sure it passes all automatic tests. Safe
-    builds contain a lot of runtime assertions that can catch potential
-    bugs (similar to the sort of things valgrind can catch).
+  * Build using  python make.py  which generates builds/temp.js
 
-  * Build a fast build and make sure it passes all automatic tests.
-
-  * Run closure compiler on that fast build and make sure it passes
-    all automatic tests.
+  * Make sure it passes all automatic tests using  python test.py
+    (That uses builds/temp.js by default, you can also pass a flag
+    saying which build to use.) Note that it uses SpiderMonkey
+    by default, and SPIDERMONKEY_ENGINE is defined in ~/.emscripten,
+    see the script contents for details.
 
   * Make sure that the stress test benchmark did not regress
-    compared to the old build.
+    compared to the old build. That number is printed out at the
+    end of running the tests.
 
   * Run the WebGL demo in examples/webgl_demo and make sure it looks
-    ok.
+    ok, using something like  firefox examples/webgl_demo/ammo.html
+    (chrome will need a webserver as it doesn't like file:// urls)
 
 
 Upstream Version
 ================
 
-Bullet 2.82
+Bullet 2.82 patched with [raycast fix from 2.83](https://github.com/bulletphysics/bullet3/commit/7151865c16ba996996206e1fd7869cbb1e7edd8d)
 

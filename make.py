@@ -1,11 +1,11 @@
 #!/usr/bin/python
 
-import os, sys, re, json, shutil
+import os, sys, re, json, shutil, multiprocessing
 from subprocess import Popen, PIPE, STDOUT
 
 # Definitions
 
-INCLUDES = ['btBulletDynamicsCommon.h', os.path.join('BulletCollision', 'CollisionShapes', 'btHeightfieldTerrainShape.h'), os.path.join('BulletCollision', 'CollisionDispatch', 'btGhostObject.h'), os.path.join('BulletDynamics', 'Character', 'btKinematicCharacterController.h')]
+INCLUDES = ['btBulletDynamicsCommon.h', os.path.join('BulletCollision', 'CollisionShapes', 'btHeightfieldTerrainShape.h'), os.path.join('BulletCollision', 'CollisionDispatch', 'btGhostObject.h'), os.path.join('BulletDynamics', 'Character', 'btKinematicCharacterController.h'), os.path.join('BulletSoftBody', 'btSoftBody.h'), os.path.join('BulletSoftBody', 'btSoftRigidDynamicsWorld.h'), os.path.join('BulletSoftBody', 'btDefaultSoftBodySolver.h'), os.path.join('BulletSoftBody', 'btSoftBodyRigidBodyCollisionConfiguration.h'), os.path.join('BulletSoftBody', 'btSoftBodyHelpers.h')]
 
 # Startup
 
@@ -30,12 +30,28 @@ import tools.shared as emscripten
           Settings.CORRECT_OVERFLOWS = 0
           Settings.CORRECT_ROUNDINGS = 0
 '''
-emcc_args = sys.argv[1:] or '-O3 --llvm-lto 1 -s NO_EXIT_RUNTIME=1 -s AGGRESSIVE_VARIABLE_ELIMINATION=1 -s NO_DYNAMIC_EXECUTION=1 --memory-init-file 0 -s NO_FILESYSTEM=1 -s NO_BROWSER=1'.split(' ')
+
+wasm = 'wasm' in sys.argv
+closure = 'closure' in sys.argv
+
+args = '-O3 --llvm-lto 1 -s NO_EXIT_RUNTIME=1 --memory-init-file 0 -s NO_FILESYSTEM=1 -s EXPORTED_RUNTIME_METHODS=[]'
+if not wasm:
+  args += ' -s AGGRESSIVE_VARIABLE_ELIMINATION=1 -s ELIMINATE_DUPLICATE_FUNCTIONS=1'
+else:
+  args += ''' -s WASM=1 -s BINARYEN_IGNORE_IMPLICIT_TRAPS=1 -s BINARYEN_TRAP_MODE="allow"'''
+if closure:
+  args += ' --closure 1'
+else:
+  args += ' -s NO_DYNAMIC_EXECUTION=1'
+
+emcc_args = args.split(' ')
 
 emcc_args += ['-s', 'TOTAL_MEMORY=%d' % (64*1024*1024)] # default 64MB. Compile with ALLOW_MEMORY_GROWTH if you want a growable heap (slower though).
 #emcc_args += ['-s', 'ALLOW_MEMORY_GROWTH=1'] # resizable heap, with some amount of slowness
 
-emcc_args += '-s EXPORT_NAME="AmmoLib" -s MODULARIZE=1'.split(' ')
+emcc_args += '-s EXPORT_NAME="Ammo" -s MODULARIZE=1'.split(' ')
+
+target = 'ammo.js' if not wasm else 'ammo.wasm.js'
 
 print
 print '--------------------------------------------------'
@@ -109,19 +125,23 @@ try:
 
   stage('Make')
 
+  CORES = multiprocessing.cpu_count()
+
   if emscripten.WINDOWS:
-    emscripten.Building.make(['mingw32-make', '-j'])
+    emscripten.Building.make(['mingw32-make', '-j', str(CORES)])
   else:
-    emscripten.Building.make(['make', '-j'])
+    emscripten.Building.make(['make', '-j', str(CORES)])
 
   stage('Link')
 
   if cmake_build:
-    bullet_libs = [os.path.join('src', 'BulletDynamics', 'libBulletDynamics.a'),
+    bullet_libs = [os.path.join('src', 'BulletSoftBody', 'libBulletSoftBody.a'),
+                   os.path.join('src', 'BulletDynamics', 'libBulletDynamics.a'),
                    os.path.join('src', 'BulletCollision', 'libBulletCollision.a'),
                    os.path.join('src', 'LinearMath', 'libLinearMath.a')]
   else:
-    bullet_libs = [os.path.join('src', '.libs', 'libBulletDynamics.a'),
+    bullet_libs = [os.path.join('src', '.libs', 'libBulletSoftBody.a'),
+                   os.path.join('src', '.libs', 'libBulletDynamics.a'),
                    os.path.join('src', '.libs', 'libBulletCollision.a'),
                    os.path.join('src', '.libs', 'libLinearMath.a')]
 
@@ -130,7 +150,7 @@ try:
 
   stage('emcc: ' + ' '.join(emcc_args))
 
-  temp = os.path.join('..', '..', 'builds', 'temp.js')
+  temp = os.path.join('..', '..', 'builds', target)
   emscripten.Building.emcc('libbullet.bc', emcc_args + ['--js-transform', 'python %s' % os.path.join('..', '..', 'bundle.py')],
                            temp)
 
@@ -140,9 +160,7 @@ try:
 
   wrapped = '''
 // This is ammo.js, a port of Bullet Physics to JavaScript. zlib licensed.
-''' + open(temp).read() + '''
-Ammo = AmmoLib();
-'''
+''' + open(temp).read()
 
   open(temp, 'w').write(wrapped)
 
