@@ -12,6 +12,9 @@ interface btVector3 {
   void setY(float y);
   void setZ(float z);
   void setValue(float x, float y, float z);
+  void normalize();
+  [Value] btVector3 rotate([Ref] btVector3 wAxis, float angle);
+  [Value] btVector3 normalized();
   [Operator="*=", Ref] btVector3 op_mul(float x);
 };
 
